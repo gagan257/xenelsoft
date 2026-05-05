@@ -531,3 +531,73 @@ Health check:
 ```bash
 curl http://localhost:4000/api/health
 ```
+
+---
+
+## API Smoke Test Checklist
+
+Use this quick checklist to verify all major flows after setup.
+
+### 1) Health
+
+```bash
+curl http://localhost:4000/api/health
+```
+
+Expected: `200`
+
+### 2) Register and Login
+
+Register:
+
+```bash
+curl -X POST http://localhost:4000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"smoke_user@example.com\",\"password\":\"Password123!\"}"
+```
+
+Login:
+
+```bash
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"smoke_user@example.com\",\"password\":\"Password123!\"}"
+```
+
+Expected: `201` for register, `200` for login, both return JWT token.
+
+### 3) Auth + RBAC
+
+- `GET /api/auth/me` with Bearer token -> `200`
+- `GET /api/user/welcome` with user token -> `200`
+- `GET /api/admin/health` with user token -> `403`
+- `GET /api/admin/health` with admin token -> `200`
+
+### 4) Products
+
+- `POST /api/products` -> `201`
+- `GET /api/products` -> `200`
+- `GET /api/products/:id` -> `200`
+- `PATCH /api/products/:id` -> `200`
+- `DELETE /api/products/:id` -> `204`
+
+Optional ETag check:
+- Call `GET /api/products/:id`, copy `ETag`
+- Call again with `If-None-Match` -> `304`
+
+### 5) Uploads
+
+- `POST /api/uploads/single` (form-data `file`) -> `201`
+- `POST /api/uploads/multiple` (form-data `files`) -> `201`
+- `GET /api/uploads` -> `200`
+
+Notes:
+- Upload supports configured image/document MIME types only.
+- Exceeding size limit returns `413`.
+
+### 6) Error and Security Checks
+
+- Invalid token on protected route -> `401`
+- Invalid product id format -> `400`
+- Duplicate registration email -> `409`
+- Burst auth calls should eventually hit rate limit -> `429`
